@@ -1,48 +1,73 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Générateur de CV IA</title>
-    <style>
-        body {
-            background-color: #121212;
-            color: white;
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-        input, textarea, button {
-            display: block;
-            margin-top: 10px;
-            width: 100%;
-            padding: 10px;
-            background: #1e1e1e;
-            color: white;
-            border: 1px solid #444;
-        }
-        button {
-            background: #00bcd4;
-            border: none;
-            color: white;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <h1>🧠 Générateur de CV IA</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <input name="nom" placeholder="Prénom Nom" required>
-        <input name="email" placeholder="Email" required>
-        <input name="tel" placeholder="Téléphone" required>
-        <input name="adresse" placeholder="Adresse" required>
-        <textarea name="objectif" placeholder="Objectif professionnel" required></textarea>
-        <textarea name="competences" placeholder="Compétences (séparées par ;)"></textarea>
-        <textarea name="experiences" placeholder="Expériences (séparées par ;)"></textarea>
-        <textarea name="formations" placeholder="Formations (séparées par ;)"></textarea>
-        <textarea name="langues" placeholder="Langues (séparées par ;)"></textarea>
-        <textarea name="interets" placeholder="Centres d’intérêt (séparées par ;)"></textarea>
-        <label>Photo de profil</label>
-        <input type="file" name="photo" accept="image/*">
-        <button type="submit">📄 Générer mon CV</button>
-    </form>
-</body>
-</html>
+from flask import Flask, render_template, request, send_file
+from werkzeug.utils import secure_filename
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import os
+
+app = Flask(__name__)
+UPLOAD_FOLDER = "uploads"
+OUTPUT_FOLDER = "generated"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def generer_pdf(data, photo_path=None):
+    filepath = os.path.join(OUTPUT_FOLDER, f"{secure_filename(data['nom'])}_cv.pdf")
+    c = canvas.Canvas(filepath, pagesize=A4)
+    width, height = A4
+
+    if photo_path:
+        try:
+            c.drawImage(photo_path, width - 120, height - 150, width=70, height=70, mask='auto')
+        except:
+            pass
+
+    c.setFont("Helvetica-Bold", 20)
+    c.setFillColorRGB(0.1, 0.5, 0.7)
+    c.drawString(50, height - 50, data["nom"])
+
+    c.setFont("Helvetica", 12)
+    y = height - 90
+    infos = ["email", "tel", "adresse", "objectif"]
+    for key in infos:
+        c.drawString(50, y, f"{key.capitalize()} : {data[key]}")
+        y -= 20
+
+    def section(title, content):
+        nonlocal y
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColorRGB(0.1, 0.4, 0.6)
+        c.drawString(50, y, title)
+        y -= 20
+        c.setFont("Helvetica", 12)
+        for item in content.split(";"):
+            c.drawString(70, y, f"- {item.strip()}")
+            y -= 15
+
+    section("Compétences", data["competences"])
+    section("Expériences", data["experiences"])
+    section("Formations", data["formations"])
+    section("Langues", data["langues"])
+    section("Centres d’intérêt", data["interets"])
+
+    c.save()
+    return filepath
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        data = request.form.to_dict()
+        photo = request.files.get("photo")
+        photo_path = None
+        if photo and photo.filename:
+            filename = secure_filename(photo.filename)
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(photo_path)
+        pdf_path = generer_pdf(data, photo_path)
+        return send_file(pdf_path, as_attachment=True)
+    return render_template("index.html")
+
+# ✅ Bloc final pour Render (IMPORTANT)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))  # Render attribue un port automatiquement
+    app.run(host="0.0.0.0", port=port)
