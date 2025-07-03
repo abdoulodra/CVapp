@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Générateur de CV IA</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        input, textarea, button {
+            display: block;
+            margin-top: 10px;
+            width: 100%;
+            padding: 10px;
+            background: #1e1e1e;
+            color: white;
+            border: 1px solid #444;
+        }
+        button {
+            background: #00bcd4;
+            border: none;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧠 Générateur de CV IA</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input name="nom" placeholder="Prénom Nom" required>
+        <input name="email" placeholder="Email" required>
+        <input name="tel" placeholder="Téléphone" required>
+        <input name="adresse" placeholder="Adresse" required>
+        <textarea name="objectif" placeholder="Objectif professionnel" required></textarea>
+        <textarea name="competences" placeholder="Compétences (séparées par ;)"></textarea>
+        <textarea name="experiences" placeholder="Expériences (séparées par ;)"></textarea>
+        <textarea name="formations" placeholder="Formations (séparées par ;)"></textarea>
+        <textarea name="langues" placeholder="Langues (séparées par ;)"></textarea>
+        <textarea name="interets" placeholder="Centres d’intérêt (séparées par ;)"></textarea>
+        <label>Photo de profil</label>
+        <input type="file" name="photo" accept="image/*">
+        <button type="submit">📄 Générer mon CV</button>
+    </form>
+</body>
+</html>

@@ -1,0 +1,68 @@
+from flask import Flask, render_template, request, send_file
+from werkzeug.utils import secure_filename
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import os
+
+app = Flask(__name__)
+UPLOAD_FOLDER = "uploads"
+OUTPUT_FOLDER = "generated"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def generer_pdf(data, photo_path=None):
+    filepath = os.path.join(OUTPUT_FOLDER, f"{secure_filename(data['nom'])}_cv.pdf")
+    c = canvas.Canvas(filepath, pagesize=A4)
+    width, height = A4
+
+    if photo_path:
+        try:
+            c.drawImage(photo_path, width - 120, height - 150, width=70, height=70, mask='auto')
+        except:
+            pass
+
+    c.setFont("Helvetica-Bold", 20)
+    c.setFillColorRGB(0.1, 0.5, 0.7)
+    c.drawString(50, height - 50, data["nom"])
+
+    c.setFont("Helvetica", 12)
+    y = height - 90
+    infos = ["email", "tel", "adresse", "objectif"]
+    for key in infos:
+        c.drawString(50, y, f"{key.capitalize()} : {data[key]}")
+        y -= 20
+
+    def section(title, content):
+        nonlocal y
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColorRGB(0.1, 0.4, 0.6)
+        c.drawString(50, y, title)
+        y -= 20
+        c.setFont("Helvetica", 12)
+        for item in content.split(";"):
+            c.drawString(70, y, f"- {item.strip()}")
+            y -= 15
+
+    section("Compétences", data["competences"])
+    section("Expériences", data["experiences"])
+    section("Formations", data["formations"])
+    section("Langues", data["langues"])
+    section("Centres d’intérêt", data["interets"])
+
+    c.save()
+    return filepath
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        data = request.form.to_dict()
+        photo = request.files.get("photo")
+        photo_path = None
+        if photo:
+            filename = secure_filename(photo.filename)
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(photo_path)
+        pdf_path = generer_pdf(data, photo_path)
+        return send_file(pdf_path, as_attachment=True)
+    return render_template("index.html")
